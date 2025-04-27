@@ -1,0 +1,190 @@
+--// DarkCyanLib - Roblox UI Library
+local DarkCyanLib = {}
+
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local function Create(instanceType, properties)
+    local obj = Instance.new(instanceType)
+    for prop, value in pairs(properties) do
+        obj[prop] = value
+    end
+    return obj
+end
+
+function DarkCyanLib:CreateWindow(title)
+    local ScreenGui = Create("ScreenGui", {
+        Name = "DarkCyanUI",
+        ResetOnSpawn = false,
+        Parent = game.CoreGui
+    })
+
+    local MainFrame = Create("Frame", {
+        Name = "MainFrame",
+        Parent = ScreenGui,
+        BackgroundColor3 = Color3.fromRGB(15, 15, 20),
+        Size = UDim2.new(0, 350, 0, 400),
+        Position = UDim2.new(0.5, -175, 0.5, -200),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BorderSizePixel = 0,
+    })
+
+    -- Bordas quebradas
+    local UICorner = Create("UICorner", {
+        CornerRadius = UDim.new(0, 8),
+        Parent = MainFrame
+    })
+
+    local UIStroke = Create("UIStroke", {
+        Color = Color3.fromRGB(0, 255, 255),
+        Thickness = 2,
+        Transparency = 0,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Parent = MainFrame
+    })
+
+    -- Drag (Mobile + PC)
+    local dragging
+    local dragInput
+    local dragStart
+    local startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    MainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    MainFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    game:GetService("RunService").Heartbeat:Connect(function()
+        if dragging and dragInput then
+            update(dragInput)
+        end
+    end)
+
+    -- Title
+    local TitleLabel = Create("TextLabel", {
+        Name = "TitleLabel",
+        Parent = MainFrame,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 50),
+        Position = UDim2.new(0, 0, 0, 0),
+        Text = title or "DarkCyanUI",
+        TextColor3 = Color3.fromRGB(0, 255, 255),
+        Font = Enum.Font.GothamBold,
+        TextSize = 24
+    })
+
+    -- Container
+    local Container = Create("Frame", {
+        Name = "Container",
+        Parent = MainFrame,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 1, -70),
+        Position = UDim2.new(0, 10, 0, 60)
+    })
+
+    local UIListLayout = Create("UIListLayout", {
+        Parent = Container,
+        Padding = UDim.new(0, 8),
+        SortOrder = Enum.SortOrder.LayoutOrder
+    })
+
+    local UIPadding = Create("UIPadding", {
+        Parent = Container,
+        PaddingTop = UDim.new(0, 8),
+        PaddingLeft = UDim.new(0, 5),
+        PaddingRight = UDim.new(0, 5),
+    })
+
+    local Elements = {}
+
+    function Elements:Button(text, callback)
+        local Button = Create("TextButton", {
+            Parent = Container,
+            Size = UDim2.new(1, 0, 0, 40),
+            BackgroundColor3 = Color3.fromRGB(20, 20, 25),
+            Text = text,
+            Font = Enum.Font.Gotham,
+            TextColor3 = Color3.fromRGB(0, 255, 255),
+            TextSize = 18,
+            BorderSizePixel = 0
+        })
+
+        Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = Button })
+        Create("UIStroke", {
+            Color = Color3.fromRGB(0, 200, 200),
+            Thickness = 1,
+            Parent = Button
+        })
+
+        Button.MouseButton1Click:Connect(function()
+            if callback then
+                pcall(callback)
+            end
+        end)
+    end
+
+    function Elements:Label(text)
+        local Label = Create("TextLabel", {
+            Parent = Container,
+            Size = UDim2.new(1, 0, 0, 30),
+            BackgroundTransparency = 1,
+            Text = text,
+            Font = Enum.Font.GothamSemibold,
+            TextColor3 = Color3.fromRGB(170, 170, 255),
+            TextSize = 16
+        })
+    end
+
+    function Elements:Textbox(placeholder, callback)
+        local TextBox = Create("TextBox", {
+            Parent = Container,
+            Size = UDim2.new(1, 0, 0, 40),
+            BackgroundColor3 = Color3.fromRGB(20, 20, 25),
+            PlaceholderText = placeholder or "Enter text...",
+            Font = Enum.Font.Gotham,
+            TextColor3 = Color3.fromRGB(0, 255, 255),
+            TextSize = 18,
+            BorderSizePixel = 0
+        })
+
+        Create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = TextBox })
+        Create("UIStroke", {
+            Color = Color3.fromRGB(0, 200, 200),
+            Thickness = 1,
+            Parent = TextBox
+        })
+
+        TextBox.FocusLost:Connect(function(enterPressed)
+            if enterPressed and callback then
+                pcall(function()
+                    callback(TextBox.Text)
+                end)
+            end
+        end)
+    end
+
+    return Elements
+end
+
+return DarkCyanLib
