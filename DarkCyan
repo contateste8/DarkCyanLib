@@ -1,0 +1,205 @@
+--// DarkCyanLib v2 - Roblox UI Library (Retangular, Tabs, Minimize/Close)
+local DarkCyanLib = {}
+
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local function Create(class, props)
+    local inst = Instance.new(class)
+    for i,v in pairs(props) do
+        inst[i] = v
+    end
+    return inst
+end
+
+function DarkCyanLib:CreateWindow(name)
+    local gui = Create("ScreenGui", {
+        Name = "DarkCyanUI",
+        Parent = game:GetService("CoreGui"),
+        ResetOnSpawn = false
+    })
+
+    local main = Create("Frame", {
+        Parent = gui,
+        Size = UDim2.new(0, 500, 0, 400),
+        BackgroundColor3 = Color3.fromRGB(15, 15, 20),
+        BorderColor3 = Color3.fromRGB(0, 255, 255),
+        Position = UDim2.new(0.5, -250, 0.5, -200),
+        AnchorPoint = Vector2.new(0.5, 0.5)
+    })
+
+    -- Dragging
+    local dragging, dragInput, dragStart, startPos
+
+    main.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = main.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    main.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    game:GetService("RunService").Heartbeat:Connect(function()
+        if dragging and dragInput then
+            local delta = dragInput.Position - dragStart
+            main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    -- Top Bar
+    local topbar = Create("Frame", {
+        Parent = main,
+        Size = UDim2.new(1, 0, 0, 40),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 25),
+        BorderSizePixel = 0
+    })
+
+    local title = Create("TextLabel", {
+        Parent = topbar,
+        Size = UDim2.new(1, -80, 1, 0),
+        BackgroundTransparency = 1,
+        Text = name or "DarkCyanUI",
+        Font = Enum.Font.GothamBold,
+        TextSize = 20,
+        TextColor3 = Color3.fromRGB(0, 255, 255),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Position = UDim2.new(0, 10, 0, 0)
+    })
+
+    -- Buttons - Minimize and Close
+    local closeButton = Create("TextButton", {
+        Parent = topbar,
+        Size = UDim2.new(0, 40, 1, 0),
+        Position = UDim2.new(1, -40, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "X",
+        Font = Enum.Font.GothamBold,
+        TextSize = 20,
+        TextColor3 = Color3.fromRGB(255, 80, 80)
+    })
+
+    local minimizeButton = Create("TextButton", {
+        Parent = topbar,
+        Size = UDim2.new(0, 40, 1, 0),
+        Position = UDim2.new(1, -80, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "-",
+        Font = Enum.Font.GothamBold,
+        TextSize = 28,
+        TextColor3 = Color3.fromRGB(0, 255, 255)
+    })
+
+    local content = Create("Frame", {
+        Parent = main,
+        Position = UDim2.new(0, 0, 0, 40),
+        Size = UDim2.new(1, 0, 1, -40),
+        BackgroundColor3 = Color3.fromRGB(10, 10, 15),
+        BorderSizePixel = 0
+    })
+
+    -- Tabs System
+    local tabButtons = Create("Frame", {
+        Parent = content,
+        Size = UDim2.new(0, 120, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 25),
+        BorderSizePixel = 0
+    })
+
+    local tabsContainer = Create("Frame", {
+        Parent = content,
+        Position = UDim2.new(0, 120, 0, 0),
+        Size = UDim2.new(1, -120, 1, 0),
+        BackgroundTransparency = 1
+    })
+
+    local UIListTabs = Create("UIListLayout", {
+        Parent = tabButtons,
+        Padding = UDim.new(0, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder
+    })
+
+    local Tabs = {}
+
+    function Tabs:CreateTab(tabName)
+        local TabButton = Create("TextButton", {
+            Parent = tabButtons,
+            Size = UDim2.new(1, 0, 0, 40),
+            BackgroundColor3 = Color3.fromRGB(30, 30, 40),
+            Text = tabName,
+            Font = Enum.Font.GothamBold,
+            TextSize = 16,
+            TextColor3 = Color3.fromRGB(0, 255, 255),
+            BorderSizePixel = 0
+        })
+
+        local TabPage = Create("ScrollingFrame", {
+            Parent = tabsContainer,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            ScrollBarThickness = 4,
+            Visible = false,
+            CanvasSize = UDim2.new(0, 0, 1, 0)
+        })
+
+        local UIListLayout = Create("UIListLayout", {
+            Parent = TabPage,
+            Padding = UDim.new(0, 6),
+            SortOrder = Enum.SortOrder.LayoutOrder
+        })
+
+        TabButton.MouseButton1Click:Connect(function()
+            for _, page in pairs(tabsContainer:GetChildren()) do
+                if page:IsA("ScrollingFrame") then
+                    page.Visible = false
+                end
+            end
+            TabPage.Visible = true
+        end)
+
+        local Elements = {}
+
+        function Elements:Button(text, callback)
+            local Button = Create("TextButton", {
+                Parent = TabPage,
+                Size = UDim2.new(1, -10, 0, 40),
+                BackgroundColor3 = Color3.fromRGB(25, 25, 35),
+                Text = text,
+                Font = Enum.Font.Gotham,
+                TextSize = 16,
+                TextColor3 = Color3.fromRGB(0, 255, 255),
+                BorderSizePixel = 0
+            })
+
+            Button.MouseButton1Click:Connect(function()
+                if callback then
+                    pcall(callback)
+                end
+            end)
+        end
+
+        return Elements
+    end
+
+    minimizeButton.MouseButton1Click:Connect(function()
+        content.Visible = not content.Visible
+    end)
+
+    closeButton.MouseButton1Click:Connect(function()
+        gui:Destroy()
+    end)
+
+    return Tabs
+end
+
+return DarkCyanLib
